@@ -71,12 +71,9 @@ public class JwtTokenUtil implements Serializable{
 	
 	public String generateToken(UserDetails userDetails) {
 		Map<String,Object> claims = new HashMap<>();
-		
 		claims.put(CLAIM_KEY_USERNAME, userDetails.getUsername());
-		
 		final Date createdDate = new Date();
 		claims.put(CLAIM_KEY_CREATED, createdDate);
-		
 		return doGenerateToken(claims);
 	}
 
@@ -84,6 +81,8 @@ public class JwtTokenUtil implements Serializable{
 	private String doGenerateToken(Map<String, Object> claims) {
 		final Date createdDate = (Date) claims.get(CLAIM_KEY_CREATED);
 		final Date expirationDate = new Date(createdDate.getTime() + expiration * 1000);
+		System.out.println("Expirationdate: "+expirationDate.toString());
+		
 		return Jwts.builder()
 				.setClaims(claims)
 				.setExpiration(expirationDate)

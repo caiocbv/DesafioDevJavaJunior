@@ -13,6 +13,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,70 +31,76 @@ import com.pitang.DesafioDevJavaJunior.security.model.CurrentUser;
 @RestController
 @CrossOrigin(origins = "*")
 public class AuthenticationRestController {
-	
-	
+
 	@Autowired
-	private  AuthenticationManager authenticationManager;
-	
+	private AuthenticationManager authenticationManager;
+
 	@Autowired
 	private JwtTokenUtil jwtTokenUtil;
-	
+
 	@Autowired
 	private UserDetailsService userDetailsService;
-	
+
 	@Autowired
 	private UsuarioDao userDao;
 	
-	@GetMapping(value ="/api/signin/")
+	@Autowired
+	PasswordEncoder passEncoder;
+
+	@GetMapping(value = "/api/signin/")
 	public JwtAuthenticationRequest getJwtAuthExample() {
-		return new JwtAuthenticationRequest("email","password");
+		return new JwtAuthenticationRequest("email", "password");
 	}
-	
-	
+
 	@PostMapping(value = "/api/signin/")
-	public @ResponseBody ResponseEntity<?> createAuthenticationToken(@Valid JwtAuthenticationRequest authenticationRequest) {
-		System.out.println("============>"+authenticationRequest.getEmail() + " senha recebida" + authenticationRequest.getPassword());
-		System.out.println("Senha do usuario no banco: " +this.userDao.findByEmail(authenticationRequest.getEmail()).getPassword());
+	public @ResponseBody ResponseEntity<?> createAuthenticationToken(
+			@Valid JwtAuthenticationRequest authenticationRequest) {
+		if (authenticationRequest != null) {
+			System.out.println("============>" + authenticationRequest.getEmail() + " senha recebida"
+					+ authenticationRequest.getPassword());
+			if (this.userDao.findByEmail(authenticationRequest.getEmail()) != null) {
+				System.out.println("Senha do usuario no banco: "
+						+ this.userDao.findByEmail(authenticationRequest.getEmail()).getPassword());
+			}
+		}
 		
-		try{
-			final Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(
-						authenticationRequest.getEmail(),
-						authenticationRequest.getPassword()
-				)
-		);
-		
-		System.out.println("passou");
-		
-		SecurityContextHolder.getContext().setAuthentication(authentication);
-		final UserDetails userDetails = this.userDetailsService.loadUserByUsername(authenticationRequest.getEmail());
-		System.out.println("UserDetails =>" +  userDetails.getPassword());
-		final String token = jwtTokenUtil.generateToken(userDetails);
-		System.out.println("3");
-		final Usuario user = userDao.findByEmail(authenticationRequest.getEmail());
-		user.setPassword(null);
-		return ResponseEntity.ok(new CurrentUser(token, user));
-		}catch(AuthenticationException e) {
+		try {
+			final Authentication authentication = authenticationManager
+					.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getEmail(),
+							authenticationRequest.getPassword()));
+
+			System.out.println("passou");
+
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+			final UserDetails userDetails = this.userDetailsService
+					.loadUserByUsername(authenticationRequest.getEmail());
+			System.out.println("UserDetails =>" + userDetails.getPassword());
+			final String token = jwtTokenUtil.generateToken(userDetails);
+			//System.out.println("Token: " + token);
+			final Usuario user = userDao.findByEmail(authenticationRequest.getEmail());
+			user.setPassword(null);
+			return ResponseEntity.ok(new CurrentUser(token, user));
+		} catch (AuthenticationException e) {
 			System.out.println(" =============================== Erro encontrado ================================ ");
 			System.out.println(e.getMessage());
 			System.out.println(" ================================================================================ ");
-			
+
 			throw e;
 		}
 	}
-	
+
 	@PostMapping(value = "api/refresh")
-	public ResponseEntity<?> refreshAndGetAuthenticationToken(HttpServletRequest request){
+	public ResponseEntity<?> refreshAndGetAuthenticationToken(HttpServletRequest request) {
 		String token = request.getHeader("Authorization");
 		String email = jwtTokenUtil.getUsernameFromToken(token);
 		final Usuario user = userDao.findByEmail(email);
-		
-		if(jwtTokenUtil.canTokenBeRefreshed(token)) {
+
+		if (jwtTokenUtil.canTokenBeRefreshed(token)) {
 			String refreshedToken = this.jwtTokenUtil.refreshToken(token);
 			return ResponseEntity.ok(new CurrentUser(refreshedToken, user));
-		}else
+		} else
 			return ResponseEntity.badRequest().body(null);
-		
+
 	}
-	
+
 }

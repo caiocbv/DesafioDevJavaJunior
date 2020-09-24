@@ -58,7 +58,7 @@ public class UsuarioController {
 	 * Cadastra um Novo usuário
 	 */
 	@PostMapping
-	public @ResponseBody ResponseEntity novoUsuario(@Valid Usuario user) {
+	public @ResponseBody ResponseEntity<?> novoUsuario(@Valid Usuario user) {
 		if (user.getFirstName() != null && user.getLastName() != null && user.getBirthday() != null
 				&& user.getPhone() != null && user.getEmail() != null && user.getLogin() != null
 				&& user.getPassword() != null) {
